@@ -1539,7 +1539,7 @@ lws_latency(struct libwebsocket_context *context, struct libwebsocket *wsi,
 
 #ifdef LWS_NO_SERVER
 int
-_libwebsocket_rx_flow_control(struct libswebsocket *wsi)
+_libwebsocket_rx_flow_control(struct libwebsocket *wsi)
 {
 	return 0;
 }
@@ -2276,52 +2276,42 @@ bail:
  * Returns 0 if proxy string was parsed and proxy was setup. 
  * Returns -1 if @proxy is NULL or has incorrect format.
  *
- *   IMPORTANT! You should call this function right after creation of the libwebsocket_context
- *   and before call to connect. If you call this function after connect behavior is undefined.
- *   This function will override proxy settings made on libwebsocket_context creation with genenv() call.
+ * This is only required if your OS does not provide the http_proxy
+ * enviroment variable (eg, OSX)
+ *
+ *   IMPORTANT! You should call this function right after creation of the
+ *   libwebsocket_context and before call to connect. If you call this
+ *   function after connect behavior is undefined.
+ *   This function will override proxy settings made on libwebsocket_context
+ *   creation with genenv() call.
  */
 
 LWS_VISIBLE int
 libwebsocket_set_proxy(struct libwebsocket_context *context, const char *proxy)
 {
-	int ret = -1;
+	char *p;
 	
-	if (proxy == NULL) {
-		return ret;
-	}
-	
-	char *p = NULL;
-	char *storage = (char *)malloc(strlen(proxy)+1);
-	if (storage == NULL) {
-		lwsl_err("couldn't allocate memory to copy proxy string\n");
-		return ret;
-	}
-	
-	p = storage;
-	
-	if (p) {
-		strcpy(p, proxy);
-		strncpy(context->http_proxy_address, p,
+	if (!proxy)
+		return -1;
+
+	strncpy(context->http_proxy_address, proxy,
 				sizeof(context->http_proxy_address) - 1);
-		context->http_proxy_address[
-									sizeof(context->http_proxy_address) - 1] = '\0';
-		
-		p = strchr(context->http_proxy_address, ':');
-		if (p == NULL) {
-			lwsl_err("http_proxy needs to be ads:port\n");
-			return ret;
-		}
-		*p = '\0';
-		context->http_proxy_port = atoi(p + 1);
-		
-		lwsl_notice(" Proxy %s:%u\n",
-					context->http_proxy_address,
-					context->http_proxy_port);
-		free(storage);
-		ret = 0;
-	}
+	context->http_proxy_address[
+				sizeof(context->http_proxy_address) - 1] = '\0';
 	
-	return ret;
+	p = strchr(context->http_proxy_address, ':');
+	if (!p) {
+		lwsl_err("http_proxy needs to be ads:port\n");
+
+		return -1;
+	}
+	*p = '\0';
+	context->http_proxy_port = atoi(p + 1);
+	
+	lwsl_notice(" Proxy %s:%u\n", context->http_proxy_address,
+						context->http_proxy_port);
+
+	return 0;
 }
 
 /**
