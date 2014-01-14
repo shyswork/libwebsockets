@@ -1,6 +1,6 @@
 #include "private-libwebsockets.h"
 
-struct libwebsocket *__libwebsocket_client_connect_2(
+struct libwebsocket *libwebsocket_client_connect_2(
 	struct libwebsocket_context *context,
 	struct libwebsocket *wsi
 ) {
@@ -11,7 +11,7 @@ struct libwebsocket *__libwebsocket_client_connect_2(
 	int plen = 0;
 	const char *ads;
 
-	lwsl_client("__libwebsocket_client_connect_2\n");
+       lwsl_client("libwebsocket_client_connect_2\n");
 
 	/*
 	 * proxy?
@@ -35,7 +35,7 @@ struct libwebsocket *__libwebsocket_client_connect_2(
 	/*
 	 * prepare the actual connection (to the proxy, if any)
 	 */
-	lwsl_client("__libwebsocket_client_connect_2: address %s\n", ads);
+       lwsl_client("libwebsocket_client_connect_2: address %s\n", ads);
 
 	server_hostent = gethostbyname(ads);
 	if (server_hostent == NULL) {
@@ -82,13 +82,7 @@ struct libwebsocket *__libwebsocket_client_connect_2(
 			 * must do specifically a POLLOUT poll to hear
 			 * about the connect completion
 			 */
-
-			context->fds[wsi->position_in_fds_table].events |= POLLOUT;
-
-			/* external POLL support via protocol 0 */
-			context->protocols[0].callback(context, wsi,
-				LWS_CALLBACK_SET_MODE_POLL_FD,
-				wsi->user_space, (void *)(long)wsi->sock, POLLOUT);
+			lws_change_pollfd(wsi, 0, POLLOUT);
 
 			return wsi;
 		}
@@ -309,7 +303,7 @@ libwebsocket_client_connect(struct libwebsocket_context *context,
 #endif
 	lwsl_client("libwebsocket_client_connect: direct conn\n");
 
-	return __libwebsocket_client_connect_2(context, wsi);
+       return libwebsocket_client_connect_2(context, wsi);
 
 bail1:
 	free(wsi->u.hdr.ah);

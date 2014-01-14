@@ -52,7 +52,7 @@ int lws_client_socket_service(struct libwebsocket_context *context,
 		 * timeout protection set in client-handshake.c
 		 */
 
-		if (__libwebsocket_client_connect_2(context, wsi) == NULL) {
+               if (libwebsocket_client_connect_2(context, wsi) == NULL) {
 			/* closed */
 			lwsl_client("closed\n");
 			return -1;
@@ -119,12 +119,7 @@ int lws_client_socket_service(struct libwebsocket_context *context,
 		 * happening at a time when there's no real connection yet
 		 */
 
-		pollfd->events &= ~POLLOUT;
-
-		/* external POLL support via protocol 0 */
-		context->protocols[0].callback(context, wsi,
-			LWS_CALLBACK_CLEAR_MODE_POLL_FD,
-			wsi->user_space, (void *)(long)wsi->sock, POLLOUT);
+		lws_change_pollfd(wsi, POLLOUT, 0);
 
 		/* we can retry this... just cook the SSL BIO the first time */
 
@@ -207,8 +202,8 @@ int lws_client_socket_service(struct libwebsocket_context *context,
 				n = ERR_get_error();
 				if (n != SSL_ERROR_NONE) {
 					lwsl_err("SSL connect error %lu: %s\n",
-						ERR_get_error(),
-						ERR_error_string(ERR_get_error(),
+						n,
+						ERR_error_string(n,
 							  (char *)context->service_buffer));
 					return 0;
 				}
@@ -267,8 +262,8 @@ int lws_client_socket_service(struct libwebsocket_context *context,
 					n = ERR_get_error();
 					if (n != SSL_ERROR_NONE) {
 						lwsl_err("SSL connect error %lu: %s\n",
-								 ERR_get_error(),
-								 ERR_error_string(ERR_get_error(),
+								 n,
+								 ERR_error_string(n,
 												  (char *)context->service_buffer));
 						return 0;
 					}
